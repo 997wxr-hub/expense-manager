@@ -423,13 +423,37 @@ mark{background:#fff3b0;border-radius:2px;padding:0 1px;}
   .mobile-search-bar{display:none!important;}
   .tab-page{display:block!important;}
 }
+
+/* 设置 / 分类管理 */
+.settings-panel{background:var(--surface);border-radius:var(--r);padding:20px 18px 16px;width:min(520px,94vw);max-height:88vh;overflow-y:auto;box-shadow:0 12px 40px rgba(0,0,0,.18);}
+.settings-panel h3{font-size:1.05rem;margin-bottom:14px;}
+.settings-section{margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid var(--border);}
+.settings-section:last-child{border-bottom:none;margin-bottom:0;padding-bottom:0;}
+.settings-section h4{font-size:.85rem;color:var(--muted);margin-bottom:10px;font-weight:600;}
+.period-toggle{display:flex;gap:8px;}
+.period-toggle button{flex:1;border:1.5px solid var(--border);background:var(--surface2);border-radius:var(--r-sm);padding:10px 8px;font-size:.88rem;font-weight:600;cursor:pointer;color:var(--text);font-family:inherit;}
+.period-toggle button.active{background:var(--primary);color:#fff;border-color:var(--primary);}
+.cat-mgr-list{display:flex;flex-direction:column;gap:8px;max-height:280px;overflow-y:auto;}
+.cat-l1-block{border:1.5px solid var(--border);border-radius:var(--r-sm);padding:8px 10px;background:var(--surface2);}
+.cat-l1-head{display:flex;align-items:center;gap:6px;margin-bottom:6px;flex-wrap:wrap;}
+.cat-l1-head input{flex:1;min-width:100px;border:1.5px solid var(--border);border-radius:6px;padding:4px 8px;font-size:.85rem;font-family:inherit;}
+.cat-l2-tags{display:flex;flex-wrap:wrap;gap:5px;align-items:center;}
+.cat-l2-tag{display:inline-flex;align-items:center;gap:3px;background:#fff;border:1px solid var(--border);border-radius:14px;padding:2px 8px;font-size:.75rem;}
+.cat-l2-tag button,.cat-icon-btn{border:none;background:none;cursor:pointer;color:var(--muted);font-size:.8rem;padding:0 2px;line-height:1;}
+.cat-l2-tag button:hover,.cat-icon-btn:hover{color:var(--danger);}
+.cat-add-row{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;}
+.cat-add-row input{flex:1;min-width:120px;border:1.5px solid var(--border);border-radius:6px;padding:6px 10px;font-size:.84rem;font-family:inherit;}
+.cat-add-row button,.btn-sm-primary{background:var(--primary);color:#fff;border:none;border-radius:6px;padding:6px 12px;font-size:.8rem;font-weight:600;cursor:pointer;font-family:inherit;}
+.btn-sm-ghost{background:transparent;border:1.5px solid var(--border);border-radius:6px;padding:4px 8px;font-size:.75rem;cursor:pointer;color:var(--muted);font-family:inherit;}
+.btn-sm-ghost:hover{border-color:var(--primary);color:var(--primary);}
+.settings-hint{font-size:.75rem;color:var(--muted);margin-top:8px;line-height:1.45;}
   </style>
 </head>
 <body>
 
 <!-- ══ Topbar ══ -->
 <header class="topbar">
-  <div class="topbar-brand">💰 日常开销管理 <span>Weekly Budget Tracker</span></div>
+  <div class="topbar-brand">💰 日常开销管理 <span id="brandSubtitle">Budget Tracker</span></div>
 
   <!-- 桌面工具栏 -->
   <div class="topbar-right">
@@ -441,6 +465,7 @@ mark{background:#fff3b0;border-radius:2px;padding:0 1px;}
       <div class="fx-dot" id="fxDot"></div>
       <span id="fxBadgeText">汇率加载中…</span>
     </div>
+    <button class="btn-export" onclick="openSettingsModal()" title="设置">⚙ 设置</button>
     <button class="btn-export" onclick="openExportModal()">↓ 导出CSV</button>
     <button class="btn-add" onclick="openAddModal()">＋ 记录消费</button>
   </div>
@@ -453,6 +478,7 @@ mark{background:#fff3b0;border-radius:2px;padding:0 1px;}
     <button class="icon-btn" onclick="openFxModal()" title="汇率">
       <div style="position:relative;width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-size:.9rem;">💱<div class="fx-dot" id="fxDotMobile" style="position:absolute;top:0;right:0;width:6px;height:6px;"></div></div>
     </button>
+    <button class="icon-btn" onclick="openSettingsModal()" title="设置">⚙</button>
     <button class="icon-btn" onclick="openExportModal()" title="导出">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" width="18" height="18"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
     </button>
@@ -477,19 +503,19 @@ mark{background:#fff3b0;border-radius:2px;padding:0 1px;}
     <button onclick="dismissAutoBudget()">✕</button>
   </div>
 
-  <!-- ══ Tab页1：本周 ══ -->
+  <!-- ══ Tab页1：本期 ══ -->
   <div class="tab-page active" id="tabWeek">
 
     <div class="week-nav">
-      <button class="nav-btn" onclick="shiftWeek(-1)">‹ 上周</button>
+      <button class="nav-btn" id="navPrevBtn" onclick="shiftPeriod(-1)">‹ 上期</button>
       <div class="week-label" id="weekLabel">加载中…</div>
-      <button class="nav-btn" onclick="shiftWeek(1)">下周 ›</button>
+      <button class="nav-btn" id="navNextBtn" onclick="shiftPeriod(1)">下期 ›</button>
     </div>
 
     <!-- 预算条 -->
     <div class="budget-bar-wrap">
       <div class="budget-bar-top">
-        <span class="budget-label">本周预算</span>
+        <span class="budget-label" id="budgetLabel">本期预算</span>
         <div class="budget-input-wrap">
           <span class="budget-currency" id="budgetCurrencySymbol">$</span>
           <input type="number" id="budgetInput" placeholder="输入预算" min="0" step="0.01" inputmode="decimal"/>
@@ -509,13 +535,13 @@ mark{background:#fff3b0;border-radius:2px;padding:0 1px;}
         </div>
       </div>
       <div class="progress-track"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
-      <div class="progress-meta"><span id="progressLeft">设置本周预算后显示进度</span><span class="pct" id="progressPct"></span></div>
+      <div class="progress-meta"><span id="progressLeft">设置预算后显示进度</span><span class="pct" id="progressPct"></span></div>
     </div>
 
     <!-- 统计卡片 -->
     <div class="cards">
-      <div class="card" id="card1"><div class="card-lbl">📋 本周预算</div><div class="card-val" id="cardBudget">未设置</div><div class="card-sub">点击上方设置</div></div>
-      <div class="card" id="card2"><div class="card-lbl">💳 累计花费</div><div class="card-val" id="cardActual">$0.00</div><div class="card-sub">本周合计</div></div>
+      <div class="card" id="card1"><div class="card-lbl" id="cardBudgetLbl">📋 本期预算</div><div class="card-val" id="cardBudget">未设置</div><div class="card-sub">点击上方设置</div></div>
+      <div class="card" id="card2"><div class="card-lbl">💳 累计花费</div><div class="card-val" id="cardActual">$0.00</div><div class="card-sub" id="cardActualSub">本期合计</div></div>
       <div class="card" id="card3"><div class="card-lbl">📊 剩余/超支</div><div class="card-val" id="cardDiff">—</div><div class="card-sub" id="cardDiffSub">需先设定预算</div></div>
     </div>
 
@@ -526,18 +552,18 @@ mark{background:#fff3b0;border-radius:2px;padding:0 1px;}
         <div class="chart-wrap"><canvas id="pieChart"></canvas></div>
       </div>
       <div class="panel">
-        <div class="panel-title">本周消费明细</div>
+        <div class="panel-title" id="recordsPanelTitle">本期消费明细</div>
         <!-- 桌面：表格 -->
         <div class="table-wrap">
           <table>
             <thead><tr><th>日期</th><th>分类</th><th>金额</th><th>备注</th><th>操作</th></tr></thead>
             <tbody id="recordsBody"></tbody>
           </table>
-          <div id="emptyTip" class="empty-tip" style="display:none">🌱 本周暂无记录</div>
+          <div id="emptyTip" class="empty-tip" style="display:none">🌱 本期暂无记录</div>
         </div>
         <!-- 手机：卡片列表 -->
         <div class="record-cards" id="recordCards"></div>
-        <div id="emptyTipMobile" class="empty-tip" style="display:none">🌱 本周暂无记录，点右下角 ＋ 添加</div>
+        <div id="emptyTipMobile" class="empty-tip" style="display:none">🌱 本期暂无记录，点右下角 ＋ 添加</div>
       </div>
     </div>
 
@@ -547,11 +573,11 @@ mark{background:#fff3b0;border-radius:2px;padding:0 1px;}
   <div class="tab-page" id="tabInsights">
     <div class="insights-row">
       <div class="panel">
-        <div class="panel-title">📈 本周 vs 上周 分类对比</div>
-        <div class="insight-headline"><div class="insight-icon">💡</div><div class="insight-text" id="insightText">添加本周记录后自动生成分析</div></div>
+        <div class="panel-title" id="insightPanelTitle">📈 本期 vs 上期 分类对比</div>
+        <div class="insight-headline"><div class="insight-icon">💡</div><div class="insight-text" id="insightText">添加记录后自动生成分析</div></div>
         <div class="bar-legend">
-          <div class="leg-item"><div class="leg-dot" style="background:#D4E8E6"></div>上周</div>
-          <div class="leg-item"><div class="leg-dot" style="background:var(--primary)"></div>本周</div>
+          <div class="leg-item"><div class="leg-dot" style="background:#D4E8E6"></div><span id="legPrev">上期</span></div>
+          <div class="leg-item"><div class="leg-dot" style="background:var(--primary)"></div><span id="legCurr">本期</span></div>
           <div class="leg-item"><div class="leg-dot" style="background:var(--danger)"></div>↑涨</div>
           <div class="leg-item"><div class="leg-dot" style="background:var(--success)"></div>↓降</div>
         </div>
@@ -592,7 +618,7 @@ mark{background:#fff3b0;border-radius:2px;padding:0 1px;}
   <div class="tab-bar">
     <button class="tab-item active" id="tab-week" onclick="switchTab('week')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-      本周
+      <span id="tabPeriodLbl">本期</span>
     </button>
     <button class="tab-item" id="tab-insights" onclick="switchTab('insights')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
@@ -674,13 +700,43 @@ mark{background:#fff3b0;border-radius:2px;padding:0 1px;}
   <div class="export-panel sheet-modal">
     <h3>↓ 导出 CSV</h3>
     <div class="export-opt">
-      <label><input type="radio" name="exportRange" value="week" checked/> 本周记录</label>
-      <label><input type="radio" name="exportRange" value="month"/> 本月记录</label>
+      <label><input type="radio" name="exportRange" value="period" checked/> <span id="exportPeriodLbl">本期记录</span></label>
+      <label><input type="radio" name="exportRange" value="month"/> 日历月记录</label>
       <label><input type="radio" name="exportRange" value="all"/> 全部记录</label>
     </div>
     <div class="modal-footer" style="margin-top:0">
       <button class="btn-cancel" onclick="closeExportModal()">取消</button>
       <button class="btn-save" onclick="doExport()">下载 CSV</button>
+    </div>
+  </div>
+</div>
+
+<!-- 设置：周期 + 分类管理 -->
+<div class="overlay" id="settingsOverlay" onclick="if(event.target.id==='settingsOverlay')closeSettingsModal()">
+  <div class="settings-panel sheet-modal">
+    <h3>⚙ 设置</h3>
+    <div class="settings-section">
+      <h4>记账周期</h4>
+      <div class="period-toggle">
+        <button type="button" id="periodBtnMonth" onclick="setPeriodMode('month')">按月</button>
+        <button type="button" id="periodBtnWeek" onclick="setPeriodMode('week')">按周</button>
+      </div>
+      <p class="settings-hint">按月：每月一份预算与明细；按周：周一至周日。切换后旧周期预算仍保留，互不影响。</p>
+    </div>
+    <div class="settings-section">
+      <h4>分类管理（一级 / 二级）</h4>
+      <div class="cat-mgr-list" id="catMgrList"></div>
+      <div class="cat-add-row">
+        <input type="text" id="newL1Input" placeholder="新一级分类名称" maxlength="20"/>
+        <button type="button" onclick="addCategoryL1()">＋ 一级</button>
+      </div>
+      <p class="settings-hint">改名会同步更新历史记录。删除一级前需先清空其下二级；删除二级时，若有记录会提示改到「其他」。</p>
+      <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
+        <button type="button" class="btn-sm-ghost" onclick="resetCategories()">恢复默认分类</button>
+      </div>
+    </div>
+    <div class="modal-footer" style="margin-top:8px">
+      <button class="btn-cancel" onclick="closeSettingsModal()">关闭</button>
     </div>
   </div>
 </div>
@@ -691,7 +747,7 @@ mark{background:#fff3b0;border-radius:2px;padding:0 1px;}
 /* ══════════════════════════════════════
    分类 & 常量
 ══════════════════════════════════════ */
-const CATEGORIES={
+const DEFAULT_CATEGORIES={
   "饮食三餐":["早餐","午餐","晚餐","加餐零食","咖啡茶饮"],
   "交通出行":["公交地铁卡","打车网约车","燃油充电","停车过路费"],
   "住房居家":["房租房贷","物业取暖","日常维修","大家电家具","日用耗材"],
@@ -700,8 +756,23 @@ const CATEGORIES={
   "社交娱乐":["朋友聚餐","电影演出","游戏充值","礼物人情"],
   "杂项备用":["医疗药品","学习教育","宠物","其他"],
 };
+const CAT_KEY="expense_categories_v1";
+let CATEGORIES=loadCategories();
+function loadCategories(){
+  try{
+    const s=localStorage.getItem(CAT_KEY);
+    if(s){const p=JSON.parse(s);if(p&&typeof p==="object"&&Object.keys(p).length)return p;}
+  }catch(e){}
+  return JSON.parse(JSON.stringify(DEFAULT_CATEGORIES));
+}
+function saveCategories(){localStorage.setItem(CAT_KEY,JSON.stringify(CATEGORIES));}
 const CAT_COLORS=["#2A9D8F","#E9C46A","#F4A261","#E76F51","#57CC99","#6C9BD2","#BC8DBF","#8ECAE6"];
 const SYM={AUD:"$",CNY:"¥",USD:"US$"};
+
+/* 周期模式：month | week，默认按月 */
+const PERIOD_MODE_KEY="period_mode_v1";
+let periodMode=localStorage.getItem(PERIOD_MODE_KEY)||"month";
+let periodOffset=0;
 
 /* ══════════════════════════════════════
    手机 Tab 切换
@@ -807,25 +878,39 @@ async function initDB(){
 }
 
 /* ══════════════════════════════════════
-   预算
+   预算（按周期：w:YYYY-MM-DD / m:YYYY-MM）
 ══════════════════════════════════════ */
-const BUD_KEY="week_budgets";
-function getBudget(wk){return JSON.parse(localStorage.getItem(BUD_KEY)||"{}")[wk]??null;}
-function setBudget(wk,v){const a=JSON.parse(localStorage.getItem(BUD_KEY)||"{}");a[wk]=v;localStorage.setItem(BUD_KEY,JSON.stringify(a));}
-function autoFillBudget(wk){
-  if(getBudget(wk)!==null)return;
-  const{mon:pMon}=getWeekRange(weekOffset-1);
-  const prev=getBudget(toWeekKey(pMon));
+const BUD_KEY_NEW="period_budgets_v1";
+const BUD_KEY_OLD="week_budgets";
+function readBudgetStore(){
+  try{return JSON.parse(localStorage.getItem(BUD_KEY_NEW)||"{}");}catch(e){return{};}
+}
+function writeBudgetStore(a){localStorage.setItem(BUD_KEY_NEW,JSON.stringify(a));}
+function getBudget(key){
+  const store=readBudgetStore();
+  if(store[key]!=null)return store[key];
+  // 兼容旧版周预算（裸日期键）
+  if(key.startsWith("w:")){
+    try{const old=JSON.parse(localStorage.getItem(BUD_KEY_OLD)||"{}");const k=key.slice(2);if(old[k]!=null)return old[k];}catch(e){}
+  }
+  return null;
+}
+function setBudget(key,v){const a=readBudgetStore();a[key]=v;writeBudgetStore(a);}
+function autoFillBudget(key){
+  if(getBudget(key)!==null)return;
+  const prevRange=getPeriodRange(periodOffset-1);
+  const prev=getBudget(toPeriodKey(prevRange));
   if(prev===null)return;
-  setBudget(wk,prev);
-  document.getElementById("autoBudgetText").textContent=`已自动沿用上周预算 ${fmtBase(prev)}，可直接修改。`;
+  setBudget(key,prev);
+  const label=periodMode==="month"?"上月":"上周";
+  document.getElementById("autoBudgetText").textContent=`已自动沿用${label}预算 ${fmtBase(prev)}，可直接修改。`;
   document.getElementById("autoBudgetNotice").classList.add("show");
 }
 function dismissAutoBudget(){document.getElementById("autoBudgetNotice").classList.remove("show");}
 function saveBudget(){
   const v=parseFloat(document.getElementById("budgetInput").value);
   if(isNaN(v)||v<0){showToast("请输入有效预算金额");return;}
-  setBudget(toWeekKey(getWeekRange(weekOffset).mon),v);
+  setBudget(toPeriodKey(getPeriodRange(periodOffset)),v);
   dismissAutoBudget();renderAll();showToast("✅ 预算已保存");
 }
 
@@ -839,26 +924,73 @@ function onBaseCurrencyChange(){
 }
 
 /* ══════════════════════════════════════
-   日期工具
+   日期工具 + 周期
 ══════════════════════════════════════ */
-let weekOffset=0,monthOffset=0;
+let monthOffset=0; // 分析页「日历月」独立导航
 function getWeekRange(offset){
   const now=new Date(),dow=now.getDay()||7,mon=new Date(now);
   mon.setDate(now.getDate()-(dow-1)+offset*7);mon.setHours(0,0,0,0);
   const sun=new Date(mon);sun.setDate(mon.getDate()+6);sun.setHours(23,59,59,999);
-  return{mon,sun};
+  return{mon,sun,start:mon,end:sun};
 }
 function getMonthRange(offset){
   const now=new Date(),first=new Date(now.getFullYear(),now.getMonth()+offset,1);
-  const last=new Date(first.getFullYear(),first.getMonth()+1,0);
-  return{first,last,year:first.getFullYear(),month:first.getMonth()};
+  const last=new Date(first.getFullYear(),first.getMonth()+1,0,23,59,59,999);
+  return{first,last,year:first.getFullYear(),month:first.getMonth(),start:first,end:last};
+}
+function getPeriodRange(offset){
+  return periodMode==="month"?getMonthRange(offset):getWeekRange(offset);
+}
+function toPeriodKey(range){
+  if(periodMode==="month"){
+    const y=range.year??range.start.getFullYear();
+    const m=(range.month??range.start.getMonth())+1;
+    return`m:${y}-${String(m).padStart(2,"0")}`;
+  }
+  return`w:${toYMD(range.mon||range.start)}`;
+}
+function periodWords(){
+  if(periodMode==="month")return{curr:"本月",prev:"上月",unit:"月",navPrev:"‹ 上月",navNext:"下月 ›",tab:"本月",budget:"本月预算",records:"本月消费明细",compare:"本月 vs 上月 分类对比",empty:"🌱 本月暂无记录"};
+  return{curr:"本周",prev:"上周",unit:"周",navPrev:"‹ 上周",navNext:"下周 ›",tab:"本周",budget:"本周预算",records:"本周消费明细",compare:"本周 vs 上周 分类对比",empty:"🌱 本周暂无记录"};
+}
+function applyPeriodLabels(){
+  const w=periodWords();
+  const set=(id,t)=>{const el=document.getElementById(id);if(el)el.textContent=t;};
+  set("brandSubtitle",periodMode==="month"?"Monthly Budget":"Weekly Budget");
+  set("budgetLabel",w.budget);
+  set("cardBudgetLbl","📋 "+w.budget);
+  set("cardActualSub",w.curr+"合计");
+  set("recordsPanelTitle",w.records);
+  set("insightPanelTitle","📈 "+w.compare);
+  set("legPrev",w.prev);set("legCurr",w.curr);
+  set("tabPeriodLbl",w.tab);
+  set("exportPeriodLbl",w.curr+"记录");
+  const prevBtn=document.getElementById("navPrevBtn"),nextBtn=document.getElementById("navNextBtn");
+  if(prevBtn)prevBtn.textContent=w.navPrev;
+  if(nextBtn)nextBtn.textContent=w.navNext;
+  const empty=document.getElementById("emptyTip"),emptyM=document.getElementById("emptyTipMobile");
+  if(empty)empty.textContent=w.empty;
+  if(emptyM)emptyM.textContent=w.empty+"，点右下角 ＋ 添加";
+  const bm=document.getElementById("periodBtnMonth"),bw=document.getElementById("periodBtnWeek");
+  if(bm)bm.classList.toggle("active",periodMode==="month");
+  if(bw)bw.classList.toggle("active",periodMode==="week");
+}
+function setPeriodMode(mode){
+  if(mode!=="month"&&mode!=="week")return;
+  if(periodMode===mode)return;
+  periodMode=mode;
+  localStorage.setItem(PERIOD_MODE_KEY,mode);
+  periodOffset=0;
+  dismissAutoBudget();
+  applyPeriodLabels();
+  renderAll();
+  showToast(mode==="month"?"已切换为按月记账":"已切换为按周记账");
 }
 function toYMD(d){
   const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,"0"), day=String(d.getDate()).padStart(2,"0");
   return `${y}-${m}-${day}`;
 }
 function toMD(d){return`${d.getMonth()+1}月${d.getDate()}日`;}
-function toWeekKey(d){return toYMD(d);}
 
 /* ══════════════════════════════════════
    CRUD
@@ -910,22 +1042,23 @@ function renderPieChart(records){
    分析面板
 ══════════════════════════════════════ */
 function renderInsights(currRecords){
-  const{mon:pMon,sun:pSun}=getWeekRange(weekOffset-1);
-  const prevRecords=queryRange(toYMD(pMon),toYMD(pSun));
+  const w=periodWords();
+  const prevRange=getPeriodRange(periodOffset-1);
+  const prevRecords=queryRange(toYMD(prevRange.start),toYMD(prevRange.end));
   const curr=sumByCat(currRecords),prev=sumByCat(prevRecords);
   const allCats=[...new Set([...Object.keys(curr),...Object.keys(prev)])];
   allCats.sort((a,b)=>(curr[b]||0)-(curr[a]||0));
   const maxVal=Math.max(...allCats.map(c=>Math.max(curr[c]||0,prev[c]||0)),0.01);
   const htEl=document.getElementById("insightText");
-  if(!allCats.length){htEl.innerHTML="添加本周记录后自动生成分析";}
+  if(!allCats.length){htEl.innerHTML=`添加${w.curr}记录后自动生成分析`;}
   else{
     let topCat=null,topPct=-Infinity,topAbs=0;
     const heaviestCat=allCats[0];
     allCats.forEach(c=>{const cV=curr[c]||0,pV=prev[c]||0;if(pV>0&&cV>pV){const p=(cV-pV)/pV*100;if(p>topPct){topPct=p;topCat=c;topAbs=cV-pV;}}});
     const totalCurr=Object.values(curr).reduce((a,b)=>a+b,0);
-    if(topCat){const hp=totalCurr>0?((curr[heaviestCat]||0)/totalCurr*100).toFixed(0):0;htEl.innerHTML=`🔺 <strong>${topCat}</strong> 较上周增加 <strong style="color:var(--danger)">${topPct.toFixed(0)}%</strong>（+${fmtBase(topAbs)}），涨幅最大。<br>花费最多：<strong>${heaviestCat}</strong> 占 <strong>${hp}%</strong>。`;}
-    else if(totalCurr>0){const hp=((curr[heaviestCat]||0)/totalCurr*100).toFixed(0);htEl.innerHTML=`花费最多：<strong>${heaviestCat}</strong>（${fmtBase(curr[heaviestCat]||0)}），占 <strong>${hp}%</strong>。<br>${prevRecords.length===0?"上周暂无记录。":"本周各项均未超上周 🎉"}`;}
-    else{htEl.innerHTML="本周暂无消费记录。";}
+    if(topCat){const hp=totalCurr>0?((curr[heaviestCat]||0)/totalCurr*100).toFixed(0):0;htEl.innerHTML=`🔺 <strong>${topCat}</strong> 较${w.prev}增加 <strong style="color:var(--danger)">${topPct.toFixed(0)}%</strong>（+${fmtBase(topAbs)}），涨幅最大。<br>花费最多：<strong>${heaviestCat}</strong> 占 <strong>${hp}%</strong>。`;}
+    else if(totalCurr>0){const hp=((curr[heaviestCat]||0)/totalCurr*100).toFixed(0);htEl.innerHTML=`花费最多：<strong>${heaviestCat}</strong>（${fmtBase(curr[heaviestCat]||0)}），占 <strong>${hp}%</strong>。<br>${prevRecords.length===0?`${w.prev}暂无记录。`:`${w.curr}各项均未超${w.prev} 🎉`}`;}
+    else{htEl.innerHTML=`${w.curr}暂无消费记录。`;}
   }
   const container=document.getElementById("barList");
   if(!allCats.length){container.innerHTML=`<div style="color:var(--muted);font-size:.8rem;padding:14px 0;text-align:center">暂无数据</div>`;return;}
@@ -974,7 +1107,7 @@ function closeExportModal(){document.getElementById("exportOverlay").classList.r
 function doExport(){
   const range=document.querySelector("input[name=exportRange]:checked").value;
   let records;
-  if(range==="week"){const{mon,sun}=getWeekRange(weekOffset);records=queryRange(toYMD(mon),toYMD(sun));}
+  if(range==="period"||range==="week"){const pr=getPeriodRange(periodOffset);records=queryRange(toYMD(pr.start),toYMD(pr.end));}
   else if(range==="month"){const{first,last}=getMonthRange(monthOffset);records=queryRange(toYMD(first),toYMD(last));}
   else records=queryAll();
   if(!records.length){showToast("当前范围内暂无记录");return;}
@@ -991,15 +1124,24 @@ function doExport(){
    核心渲染
 ══════════════════════════════════════ */
 function renderAll(){
-  const{mon,sun}=getWeekRange(weekOffset);
-  const start=toYMD(mon),end=toYMD(sun),wk=toWeekKey(mon);
-  const tag=weekOffset===0?"本周":weekOffset===-1?"上周":"";
-  document.getElementById("weekLabel").innerHTML=`${toMD(mon)} — ${toMD(sun)}<small>${tag?" （"+tag+"）":""}</small>`;
-  autoFillBudget(wk);
+  applyPeriodLabels();
+  const w=periodWords();
+  const range=getPeriodRange(periodOffset);
+  const start=toYMD(range.start),end=toYMD(range.end),pkey=toPeriodKey(range);
+  let labelHtml;
+  if(periodMode==="month"){
+    const tag=periodOffset===0?"本月":periodOffset===-1?"上月":"";
+    labelHtml=`${range.year}年${range.month+1}月<small>${tag?" （"+tag+"）":""}</small>`;
+  }else{
+    const tag=periodOffset===0?"本周":periodOffset===-1?"上周":"";
+    labelHtml=`${toMD(range.start)} — ${toMD(range.end)}<small>${tag?" （"+tag+"）":""}</small>`;
+  }
+  document.getElementById("weekLabel").innerHTML=labelHtml;
+  autoFillBudget(pkey);
   const records=queryRange(start,end);
   currentWeekRecords=records;
   const totalAct=records.reduce((s,r)=>s+toBase(r.actual_amount,r.currency||"AUD"),0);
-  const budget=getBudget(wk);
+  const budget=getBudget(pkey);
   document.getElementById("baseCurrencySelect").value=baseCurrency;
   document.getElementById("budgetCurrencySymbol").textContent=SYM[baseCurrency]||"$";
   document.getElementById("budgetInput").value=budget!==null?budget:"";
@@ -1012,7 +1154,7 @@ function renderAll(){
     else if(ratio>=0.85){fill.className="progress-fill warn";pct.className="pct warn";pct.textContent=`${(ratio*100).toFixed(1)}%  ⚠️ 接近上限`;}
     else{fill.className="progress-fill";pct.className="pct ok";pct.textContent=`${(ratio*100).toFixed(1)}%`;}
     meta.textContent=`已花 ${fmtBase(totalAct)} / 预算 ${fmtBase(budget)}`;
-  }else{fill.style.width="0%";fill.className="progress-fill";pct.textContent="";meta.textContent="设置本周预算后显示进度";}
+  }else{fill.style.width="0%";fill.className="progress-fill";pct.textContent="";meta.textContent=`设置${w.budget}后显示进度`;}
   // 摘要
   document.getElementById("sumSpent").textContent=fmtBase(totalAct);
   if(budget!==null){const left=budget-totalAct,el=document.getElementById("sumLeft");el.textContent=`${left>=0?"+":""}${fmtBase(left)}`;el.className=`bsum-val ${left>=0?"ok":"over"}`;document.getElementById("sumLeftLbl").textContent=left>=0?"剩余预算":"超出预算";}
@@ -1022,7 +1164,7 @@ function renderAll(){
   if(budget!==null){c1.textContent=fmtBase(budget);c1.className="card-val";}else{c1.textContent="未设置";c1.className="card-val warn";}
   document.getElementById("cardActual").textContent=fmtBase(totalAct);
   const c3v=document.getElementById("cardDiff"),c3s=document.getElementById("cardDiffSub"),c3=document.getElementById("card3");
-  if(budget!==null){const diff=budget-totalAct;c3v.textContent=`${diff>=0?"+":""}${fmtBase(diff)}`;c3v.className=`card-val ${diff>=0?"green":"red"}`;c3s.textContent=diff>=0?"💚 本周有节余":"🔴 本周已超支";c3.className=`card ${diff>=0?"c-success":"c-danger"}`;}
+  if(budget!==null){const diff=budget-totalAct;c3v.textContent=`${diff>=0?"+":""}${fmtBase(diff)}`;c3v.className=`card-val ${diff>=0?"green":"red"}`;c3s.textContent=diff>=0?`💚 ${w.curr}有节余`:`🔴 ${w.curr}已超支`;c3.className=`card ${diff>=0?"c-success":"c-danger"}`;}
   else{c3v.textContent="—";c3v.className="card-val";c3s.textContent="需先设定预算";c3.className="card";}
   renderPieChart(records);
   renderTable(records);
@@ -1100,6 +1242,9 @@ function openEditModal(id){
   const cols=res[0].columns,r=Object.fromEntries(cols.map((c,i)=>[c,res[0].values[0][i]]));
   editingId=id;document.getElementById("modalTitle").textContent="编辑记录";
   document.getElementById("fDate").value=r.date;document.getElementById("fActual").value=r.actual_amount;document.getElementById("fCurrency").value=r.currency||"AUD";document.getElementById("fNote").value=r.note||"";
+  // 历史分类若不在列表中，临时挂入以便编辑
+  if(r.category_l1&&!CATEGORIES[r.category_l1])CATEGORIES[r.category_l1]=[r.category_l2||"其他"];
+  else if(r.category_l1&&r.category_l2&&!(CATEGORIES[r.category_l1]||[]).includes(r.category_l2))CATEGORIES[r.category_l1]=[...(CATEGORIES[r.category_l1]||[]),r.category_l2];
   initCat1();document.getElementById("fCat1").value=r.category_l1;updateCat2();document.getElementById("fCat2").value=r.category_l2;updateConvHint();
   document.getElementById("formOverlay").classList.add("active");
 }
@@ -1120,7 +1265,110 @@ function confirmDelete(id){pendingDeleteId=id;document.getElementById("confirmOv
 function closeConfirm(){document.getElementById("confirmOverlay").classList.remove("active");}
 document.getElementById("confirmOverlay").addEventListener("click",e=>{if(e.target.id==="confirmOverlay")closeConfirm();});
 
-function shiftWeek(d){weekOffset+=d;renderAll();}
+function shiftPeriod(d){periodOffset+=d;renderAll();}
+
+/* ══════════════════════════════════════
+   设置 & 分类管理
+══════════════════════════════════════ */
+function openSettingsModal(){
+  applyPeriodLabels();
+  renderCatManager();
+  document.getElementById("settingsOverlay").classList.add("active");
+}
+function closeSettingsModal(){document.getElementById("settingsOverlay").classList.remove("active");}
+
+function renderCatManager(){
+  const list=document.getElementById("catMgrList");
+  if(!list)return;
+  const keys=Object.keys(CATEGORIES);
+  if(!keys.length){list.innerHTML=`<div style="color:var(--muted);font-size:.8rem;padding:8px 0">暂无分类，请添加一级分类</div>`;return;}
+  list.innerHTML=keys.map(l1=>{
+    const l2s=CATEGORIES[l1]||[];
+    const tags=l2s.map(l2=>`<span class="cat-l2-tag"><span>${escHtml(l2)}</span><button type="button" title="改名" onclick="renameCategoryL2(${JSON.stringify(l1)},${JSON.stringify(l2)})">✎</button><button type="button" title="删除" onclick="deleteCategoryL2(${JSON.stringify(l1)},${JSON.stringify(l2)})">×</button></span>`).join("");
+    return`<div class="cat-l1-block">
+      <div class="cat-l1-head">
+        <input value="${escHtml(l1)}" data-old="${escHtml(l1)}" onchange="renameCategoryL1(this.dataset.old,this.value)" onkeydown="if(event.key==='Enter'){this.blur();event.preventDefault();}"/>
+        <button type="button" class="btn-sm-ghost" onclick="addCategoryL2Prompt(${JSON.stringify(l1)})">＋二级</button>
+        <button type="button" class="cat-icon-btn" title="删除一级" onclick="deleteCategoryL1(${JSON.stringify(l1)})">🗑</button>
+      </div>
+      <div class="cat-l2-tags">${tags||`<span style="color:var(--muted);font-size:.75rem">暂无二级</span>`}</div>
+    </div>`;
+  }).join("");
+}
+function countRecordsByCat(l1,l2){
+  if(!db)return 0;
+  try{
+    const sql=l2!=null
+      ?"SELECT COUNT(*) AS c FROM expenses WHERE category_l1=$a AND category_l2=$b"
+      :"SELECT COUNT(*) AS c FROM expenses WHERE category_l1=$a";
+    const stmt=db.prepare(sql);
+    if(l2!=null)stmt.bind({$a:l1,$b:l2});else stmt.bind({$a:l1});
+    let c=0;if(stmt.step())c=stmt.getAsObject().c||0;stmt.free();return c;
+  }catch(e){return 0;}
+}
+function renameCategoryL1(oldName,newName){
+  newName=(newName||"").trim();
+  if(!oldName||!newName||newName===oldName){renderCatManager();return;}
+  if(CATEGORIES[newName]){showToast("一级分类已存在");renderCatManager();return;}
+  CATEGORIES[newName]=CATEGORIES[oldName];
+  delete CATEGORIES[oldName];
+  if(db){db.run("UPDATE expenses SET category_l1=? WHERE category_l1=?",[newName,oldName]);persistDB();}
+  saveCategories();renderCatManager();renderAll();showToast("✅ 一级分类已改名并同步记录");
+}
+function renameCategoryL2(l1,oldL2){
+  const neu=prompt(`将「${l1} / ${oldL2}」改名为：`,oldL2);
+  if(neu==null)return;
+  const newL2=neu.trim();
+  if(!newL2||newL2===oldL2)return;
+  const arr=CATEGORIES[l1]||[];
+  if(arr.includes(newL2)){showToast("二级分类已存在");return;}
+  CATEGORIES[l1]=arr.map(x=>x===oldL2?newL2:x);
+  if(db){db.run("UPDATE expenses SET category_l2=? WHERE category_l1=? AND category_l2=?",[newL2,l1,oldL2]);persistDB();}
+  saveCategories();renderCatManager();renderAll();showToast("✅ 二级分类已改名并同步记录");
+}
+function addCategoryL1(){
+  const input=document.getElementById("newL1Input");
+  const name=(input.value||"").trim();
+  if(!name){showToast("请输入一级分类名称");return;}
+  if(CATEGORIES[name]){showToast("一级分类已存在");return;}
+  CATEGORIES[name]=["其他"];
+  saveCategories();input.value="";renderCatManager();showToast("✅ 已添加一级分类");
+}
+function addCategoryL2Prompt(l1){
+  const name=prompt(`在「${l1}」下新增二级分类：`);
+  if(name==null)return;
+  const n=name.trim();
+  if(!n)return;
+  if(!CATEGORIES[l1])return;
+  if(CATEGORIES[l1].includes(n)){showToast("二级分类已存在");return;}
+  CATEGORIES[l1].push(n);
+  saveCategories();renderCatManager();showToast("✅ 已添加二级分类");
+}
+function deleteCategoryL2(l1,l2){
+  const cnt=countRecordsByCat(l1,l2);
+  if(cnt>0){
+    if(!confirm(`「${l1} / ${l2}」下有 ${cnt} 条记录。删除后这些记录的二级分类将改为「其他」。继续？`))return;
+    if(!CATEGORIES[l1].includes("其他"))CATEGORIES[l1].push("其他");
+    if(db){db.run("UPDATE expenses SET category_l2=? WHERE category_l1=? AND category_l2=?",["其他",l1,l2]);persistDB();}
+  }else if(!confirm(`删除二级分类「${l2}」？`))return;
+  CATEGORIES[l1]=(CATEGORIES[l1]||[]).filter(x=>x!==l2);
+  if(!CATEGORIES[l1].length)CATEGORIES[l1]=["其他"];
+  saveCategories();renderCatManager();renderAll();showToast("已删除二级分类");
+}
+function deleteCategoryL1(l1){
+  const cnt=countRecordsByCat(l1,null);
+  if(cnt>0){showToast(`「${l1}」下还有 ${cnt} 条记录，请先改分类或删除记录`);return;}
+  if((CATEGORIES[l1]||[]).length>1||((CATEGORIES[l1]||[])[0]&&(CATEGORIES[l1]||[])[0]!=="其他")){
+    if(!confirm(`删除一级分类「${l1}」及其全部二级？`))return;
+  }
+  delete CATEGORIES[l1];
+  saveCategories();renderCatManager();showToast("已删除一级分类");
+}
+function resetCategories(){
+  if(!confirm("恢复默认分类？不会修改已有消费记录，仅重置可选分类列表。"))return;
+  CATEGORIES=JSON.parse(JSON.stringify(DEFAULT_CATEGORIES));
+  saveCategories();renderCatManager();showToast("已恢复默认分类");
+}
 
 let _tt;
 function showToast(msg){const el=document.getElementById("toast");el.textContent=msg;el.classList.add("show");clearTimeout(_tt);_tt=setTimeout(()=>el.classList.remove("show"),2400);}
@@ -1145,10 +1393,11 @@ if("serviceWorker"in navigator){
   try{
     loadFxCache();updateFxBadge(false);
     await initDB();
+    applyPeriodLabels();
     renderAll();
     fetchLiveFx();
   }catch(e){
-    document.body.innerHTML=`<div style="padding:40px;color:#E76F51;font-family:sans-serif"><b>初始化失败</b>：${e.message}<br><br>请通过 <code>http://</code> 协议打开（如 <code>python3 -m http.server 8080</code>）。</div>`;
+    document.body.innerHTML=`<div style="padding:40px;color:#E76F51;font-family:sans-serif"><b>初始化失败</b>：${escHtml(e.message)}<br><br>请通过 <code>http://</code> 协议打开（如 <code>python3 -m http.server 8080</code>）。</div>`;
   }
 })();
 </script>
