@@ -1,4 +1,4 @@
-const CACHE = 'expense-manager-v2';
+const CACHE = 'expense-manager-v3';
 const ASSETS = [
   './',
   './index.html',

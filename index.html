@@ -447,6 +447,14 @@ mark{background:#fff3b0;border-radius:2px;padding:0 1px;}
 .btn-sm-ghost{background:transparent;border:1.5px solid var(--border);border-radius:6px;padding:4px 8px;font-size:.75rem;cursor:pointer;color:var(--muted);font-family:inherit;}
 .btn-sm-ghost:hover{border-color:var(--primary);color:var(--primary);}
 .settings-hint{font-size:.75rem;color:var(--muted);margin-top:8px;line-height:1.45;}
+.cat-l2-inline{display:none;gap:6px;margin:6px 0 4px;flex-wrap:wrap;align-items:center;}
+.cat-l2-inline.show{display:flex;}
+.cat-l2-inline input{flex:1;min-width:120px;border:1.5px solid var(--border);border-radius:6px;padding:6px 10px;font-size:16px;font-family:inherit;}
+#uiDialogOverlay{z-index:400;}
+.ui-dialog-box{background:var(--surface);border-radius:var(--r);padding:20px 18px 16px;width:min(360px,94vw);box-shadow:0 12px 40px rgba(0,0,0,.22);}
+.ui-dialog-box p{font-size:.88rem;line-height:1.55;margin-bottom:12px;color:var(--text);}
+.ui-dialog-box input{width:100%;border:1.5px solid var(--border);border-radius:var(--r-sm);padding:9px 10px;font-size:16px;font-family:inherit;margin-bottom:12px;outline:none;}
+.ui-dialog-box input:focus{border-color:var(--primary);}
   </style>
 </head>
 <body>
@@ -637,7 +645,7 @@ mark{background:#fff3b0;border-radius:2px;padding:0 1px;}
     <div class="modal-title" id="modalTitle">记录消费</div>
     <div class="form-row">
       <label>日期</label>
-      <input type="date" id="fDate"/>
+      <input type="date" id="fDate" onchange="onFormDateChange()"/>
     </div>
     <div class="form-row form-two">
       <div><label>一级分类</label><select id="fCat1" onchange="updateCat2()"></select></div>
@@ -669,13 +677,25 @@ mark{background:#fff3b0;border-radius:2px;padding:0 1px;}
   </div>
 </div>
 
-<!-- 删除确认 -->
+<!-- 删除确认（消费记录） -->
 <div class="overlay" id="confirmOverlay">
   <div class="confirm-box sheet-modal">
     <p>⚠️ 确认删除这条记录？<br><small style="color:var(--muted)">此操作不可撤销</small></p>
     <div class="modal-footer" style="justify-content:center">
       <button class="btn-cancel" onclick="closeConfirm()">取消</button>
       <button class="btn-danger" id="confirmDeleteBtn">确认删除</button>
+    </div>
+  </div>
+</div>
+
+<!-- 通用确认 / 输入（设置分类用，避免 prompt/confirm 在手机端失效） -->
+<div class="overlay" id="uiDialogOverlay">
+  <div class="ui-dialog-box sheet-modal">
+    <p id="uiDialogMsg"></p>
+    <input type="text" id="uiDialogInput" style="display:none" maxlength="20"/>
+    <div class="modal-footer" style="justify-content:center;margin-top:0">
+      <button class="btn-cancel" type="button" id="uiDialogCancel">取消</button>
+      <button class="btn-save" type="button" id="uiDialogOk">确定</button>
     </div>
   </div>
 </div>
@@ -1231,9 +1251,32 @@ let editingId=null;
 function initCat1(){document.getElementById("fCat1").innerHTML=Object.keys(CATEGORIES).map(k=>`<option value="${k}">${k}</option>`).join("");updateCat2();}
 function updateCat2(){const cat1=document.getElementById("fCat1").value;document.getElementById("fCat2").innerHTML=(CATEGORIES[cat1]||[]).map(v=>`<option value="${v}">${v}</option>`).join("");}
 function updateConvHint(){const v=parseFloat(document.getElementById("fActual").value),cur=document.getElementById("fCurrency").value,hint=document.getElementById("convHint");if(!isNaN(v)&&v>0&&cur!==baseCurrency){hint.textContent=`≈ ${fmtBase(toBase(v,cur))}（换算为 ${baseCurrency}）`;}else hint.textContent="";}
+/* 日期记忆：同一次打开页面内记住上次选择的日期；超时或重新进入页面后回到今天 */
+const STICKY_DATE_KEY="expense_sticky_date_v1";
+const STICKY_DATE_TTL_MS=3*60*60*1000; // 3 小时
+function getStickyDate(){
+  try{
+    const raw=sessionStorage.getItem(STICKY_DATE_KEY);
+    if(!raw)return null;
+    const{date,at}=JSON.parse(raw);
+    if(!date||!at)return null;
+    if(Date.now()-at>STICKY_DATE_TTL_MS){sessionStorage.removeItem(STICKY_DATE_KEY);return null;}
+    return date;
+  }catch(e){return null;}
+}
+function setStickyDate(date){
+  if(!date)return;
+  try{sessionStorage.setItem(STICKY_DATE_KEY,JSON.stringify({date,at:Date.now()}));}catch(e){}
+}
+function onFormDateChange(){
+  const v=document.getElementById("fDate").value;
+  if(v&&editingId===null)setStickyDate(v);
+}
 function openAddModal(){
   editingId=null;document.getElementById("modalTitle").textContent="记录消费";
-  document.getElementById("fDate").value=toYMD(new Date());document.getElementById("fActual").value="";document.getElementById("fNote").value="";document.getElementById("fCurrency").value="AUD";document.getElementById("convHint").textContent="";
+  const sticky=getStickyDate();
+  document.getElementById("fDate").value=sticky||toYMD(new Date());
+  document.getElementById("fActual").value="";document.getElementById("fNote").value="";document.getElementById("fCurrency").value="AUD";document.getElementById("convHint").textContent="";
   initCat1();document.getElementById("formOverlay").classList.add("active");
   setTimeout(()=>document.getElementById("fActual").focus(),250);
 }
@@ -1254,7 +1297,7 @@ function saveRecord(){
   if(actual===""||isNaN(actual)){showToast("请填写金额");return;}
   if(parseFloat(actual)<0){showToast("金额不能为负数");return;}
   if(editingId!==null){updateRecord(editingId,{date,cat1,cat2,actual,currency,note});showToast("✅ 记录已更新");}
-  else{insertRecord({date,cat1,cat2,actual,currency,note});showToast("✅ 记录已添加");}
+  else{insertRecord({date,cat1,cat2,actual,currency,note});setStickyDate(date);showToast("✅ 记录已添加");}
   closeModal();renderAll();
 }
 function closeModal(){document.getElementById("formOverlay").classList.remove("active");}
@@ -1277,6 +1320,44 @@ function openSettingsModal(){
 }
 function closeSettingsModal(){document.getElementById("settingsOverlay").classList.remove("active");}
 
+/* 自定义确认/输入（替代 window.prompt / confirm，手机端更可靠） */
+function uiConfirm(message){
+  return new Promise(resolve=>{
+    const overlay=document.getElementById("uiDialogOverlay");
+    const msg=document.getElementById("uiDialogMsg");
+    const input=document.getElementById("uiDialogInput");
+    const ok=document.getElementById("uiDialogOk");
+    const cancel=document.getElementById("uiDialogCancel");
+    msg.textContent=message;
+    input.style.display="none";input.value="";
+    ok.textContent="确定";ok.className="btn-danger";
+    const finish=v=>{overlay.classList.remove("active");ok.onclick=null;cancel.onclick=null;resolve(v);};
+    ok.onclick=()=>finish(true);
+    cancel.onclick=()=>finish(false);
+    overlay.onclick=e=>{if(e.target===overlay)finish(false);};
+    overlay.classList.add("active");
+  });
+}
+function uiPrompt(message,defaultValue=""){
+  return new Promise(resolve=>{
+    const overlay=document.getElementById("uiDialogOverlay");
+    const msg=document.getElementById("uiDialogMsg");
+    const input=document.getElementById("uiDialogInput");
+    const ok=document.getElementById("uiDialogOk");
+    const cancel=document.getElementById("uiDialogCancel");
+    msg.textContent=message;
+    input.style.display="block";input.value=defaultValue||"";
+    ok.textContent="确定";ok.className="btn-save";
+    const finish=v=>{overlay.classList.remove("active");ok.onclick=null;cancel.onclick=null;resolve(v);};
+    ok.onclick=()=>finish(input.value);
+    cancel.onclick=()=>finish(null);
+    overlay.onclick=e=>{if(e.target===overlay)finish(null);};
+    input.onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();finish(input.value);}};
+    overlay.classList.add("active");
+    setTimeout(()=>{input.focus();input.select();},80);
+  });
+}
+
 function renderCatManager(){
   const list=document.getElementById("catMgrList");
   if(!list)return;
@@ -1284,16 +1365,49 @@ function renderCatManager(){
   if(!keys.length){list.innerHTML=`<div style="color:var(--muted);font-size:.8rem;padding:8px 0">暂无分类，请添加一级分类</div>`;return;}
   list.innerHTML=keys.map(l1=>{
     const l2s=CATEGORIES[l1]||[];
-    const tags=l2s.map(l2=>`<span class="cat-l2-tag"><span>${escHtml(l2)}</span><button type="button" title="改名" onclick="renameCategoryL2(${JSON.stringify(l1)},${JSON.stringify(l2)})">✎</button><button type="button" title="删除" onclick="deleteCategoryL2(${JSON.stringify(l1)},${JSON.stringify(l2)})">×</button></span>`).join("");
-    return`<div class="cat-l1-block">
+    const tags=l2s.map(l2=>`<span class="cat-l2-tag" data-l2="${escHtml(l2)}"><span>${escHtml(l2)}</span><button type="button" class="cat-rename-l2" title="改名">✎</button><button type="button" class="cat-del-l2" title="删除">×</button></span>`).join("");
+    return`<div class="cat-l1-block" data-l1="${escHtml(l1)}">
       <div class="cat-l1-head">
-        <input value="${escHtml(l1)}" data-old="${escHtml(l1)}" onchange="renameCategoryL1(this.dataset.old,this.value)" onkeydown="if(event.key==='Enter'){this.blur();event.preventDefault();}"/>
-        <button type="button" class="btn-sm-ghost" onclick="addCategoryL2Prompt(${JSON.stringify(l1)})">＋二级</button>
-        <button type="button" class="cat-icon-btn" title="删除一级" onclick="deleteCategoryL1(${JSON.stringify(l1)})">🗑</button>
+        <input class="cat-l1-input" value="${escHtml(l1)}" maxlength="20"/>
+        <button type="button" class="btn-sm-ghost cat-add-l2">＋二级</button>
+        <button type="button" class="cat-icon-btn cat-del-l1" title="删除一级">🗑</button>
+      </div>
+      <div class="cat-l2-inline">
+        <input class="cat-l2-new" type="text" placeholder="二级分类名称" maxlength="20"/>
+        <button type="button" class="btn-sm-primary cat-l2-save">添加</button>
+        <button type="button" class="btn-sm-ghost cat-l2-cancel">取消</button>
       </div>
       <div class="cat-l2-tags">${tags||`<span style="color:var(--muted);font-size:.75rem">暂无二级</span>`}</div>
     </div>`;
   }).join("");
+
+  list.querySelectorAll(".cat-l1-block").forEach(block=>{
+    const l1=block.getAttribute("data-l1");
+    const l1Input=block.querySelector(".cat-l1-input");
+    const inline=block.querySelector(".cat-l2-inline");
+    const l2New=block.querySelector(".cat-l2-new");
+
+    l1Input.addEventListener("change",()=>renameCategoryL1(l1,l1Input.value));
+    l1Input.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();l1Input.blur();}});
+
+    block.querySelector(".cat-add-l2").addEventListener("click",()=>{
+      list.querySelectorAll(".cat-l2-inline.show").forEach(el=>{if(el!==inline)el.classList.remove("show");});
+      inline.classList.add("show");
+      l2New.value="";
+      setTimeout(()=>l2New.focus(),50);
+    });
+    block.querySelector(".cat-l2-cancel").addEventListener("click",()=>inline.classList.remove("show"));
+    block.querySelector(".cat-l2-save").addEventListener("click",()=>addCategoryL2(l1,l2New.value));
+    l2New.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();addCategoryL2(l1,l2New.value);}});
+
+    block.querySelector(".cat-del-l1").addEventListener("click",()=>deleteCategoryL1(l1));
+
+    block.querySelectorAll(".cat-l2-tag").forEach(tag=>{
+      const l2=tag.getAttribute("data-l2");
+      tag.querySelector(".cat-rename-l2").addEventListener("click",()=>renameCategoryL2(l1,l2));
+      tag.querySelector(".cat-del-l2").addEventListener("click",()=>deleteCategoryL2(l1,l2));
+    });
+  });
 }
 function countRecordsByCat(l1,l2){
   if(!db)return 0;
@@ -1315,8 +1429,8 @@ function renameCategoryL1(oldName,newName){
   if(db){db.run("UPDATE expenses SET category_l1=? WHERE category_l1=?",[newName,oldName]);persistDB();}
   saveCategories();renderCatManager();renderAll();showToast("✅ 一级分类已改名并同步记录");
 }
-function renameCategoryL2(l1,oldL2){
-  const neu=prompt(`将「${l1} / ${oldL2}」改名为：`,oldL2);
+async function renameCategoryL2(l1,oldL2){
+  const neu=await uiPrompt(`将「${l1} / ${oldL2}」改名为：`,oldL2);
   if(neu==null)return;
   const newL2=neu.trim();
   if(!newL2||newL2===oldL2)return;
@@ -1334,38 +1448,41 @@ function addCategoryL1(){
   CATEGORIES[name]=["其他"];
   saveCategories();input.value="";renderCatManager();showToast("✅ 已添加一级分类");
 }
-function addCategoryL2Prompt(l1){
-  const name=prompt(`在「${l1}」下新增二级分类：`);
-  if(name==null)return;
-  const n=name.trim();
-  if(!n)return;
-  if(!CATEGORIES[l1])return;
+function addCategoryL2(l1,name){
+  const n=(name||"").trim();
+  if(!n){showToast("请输入二级分类名称");return;}
+  if(!CATEGORIES[l1]){showToast("一级分类不存在");renderCatManager();return;}
   if(CATEGORIES[l1].includes(n)){showToast("二级分类已存在");return;}
   CATEGORIES[l1].push(n);
   saveCategories();renderCatManager();showToast("✅ 已添加二级分类");
 }
-function deleteCategoryL2(l1,l2){
+async function deleteCategoryL2(l1,l2){
   const cnt=countRecordsByCat(l1,l2);
   if(cnt>0){
-    if(!confirm(`「${l1} / ${l2}」下有 ${cnt} 条记录。删除后这些记录的二级分类将改为「其他」。继续？`))return;
+    const ok=await uiConfirm(`「${l1} / ${l2}」下有 ${cnt} 条记录。删除后这些记录的二级分类将改为「其他」。继续？`);
+    if(!ok)return;
     if(!CATEGORIES[l1].includes("其他"))CATEGORIES[l1].push("其他");
     if(db){db.run("UPDATE expenses SET category_l2=? WHERE category_l1=? AND category_l2=?",["其他",l1,l2]);persistDB();}
-  }else if(!confirm(`删除二级分类「${l2}」？`))return;
+  }else{
+    const ok=await uiConfirm(`删除二级分类「${l2}」？`);
+    if(!ok)return;
+  }
   CATEGORIES[l1]=(CATEGORIES[l1]||[]).filter(x=>x!==l2);
   if(!CATEGORIES[l1].length)CATEGORIES[l1]=["其他"];
   saveCategories();renderCatManager();renderAll();showToast("已删除二级分类");
 }
-function deleteCategoryL1(l1){
+async function deleteCategoryL1(l1){
+  if(!CATEGORIES[l1]){showToast("分类不存在");renderCatManager();return;}
   const cnt=countRecordsByCat(l1,null);
   if(cnt>0){showToast(`「${l1}」下还有 ${cnt} 条记录，请先改分类或删除记录`);return;}
-  if((CATEGORIES[l1]||[]).length>1||((CATEGORIES[l1]||[])[0]&&(CATEGORIES[l1]||[])[0]!=="其他")){
-    if(!confirm(`删除一级分类「${l1}」及其全部二级？`))return;
-  }
+  const ok=await uiConfirm(`删除一级分类「${l1}」及其全部二级？`);
+  if(!ok)return;
   delete CATEGORIES[l1];
   saveCategories();renderCatManager();showToast("已删除一级分类");
 }
-function resetCategories(){
-  if(!confirm("恢复默认分类？不会修改已有消费记录，仅重置可选分类列表。"))return;
+async function resetCategories(){
+  const ok=await uiConfirm("恢复默认分类？不会修改已有消费记录，仅重置可选分类列表。");
+  if(!ok)return;
   CATEGORIES=JSON.parse(JSON.stringify(DEFAULT_CATEGORIES));
   saveCategories();renderCatManager();showToast("已恢复默认分类");
 }
